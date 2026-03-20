@@ -1,0 +1,14 @@
+[project]
+name = "gtr-hub-be"
+version = "0.1.0"
+description = "GTR Hub – backend FastAPI per il simulatore di effetti chitarra"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "aiosqlite>=0.22.1",
+    "fastapi>=0.135.1",
+    "pydantic>=2.12.5",
+    "python-multipart>=0.0.22",
+    "sqlalchemy>=2.0.48",
+    "uvicorn[standard]>=0.42.0",
+]
