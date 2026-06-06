@@ -37,8 +37,13 @@ class TestPresetRouter(unittest.IsolatedAsyncioTestCase):
         db_mock.flush = AsyncMock()
         db_mock.refresh = AsyncMock()
         
+        # Mock database select result for non-existent client_id checking
+        result_mock = MagicMock()
+        result_mock.scalars = MagicMock(return_value=MagicMock(first=MagicMock(return_value=None)))
+        db_mock.execute = AsyncMock(return_value=result_mock)
+        
         # Act
-        preset = await create_preset(body=body, db=db_mock)
+        preset = await create_preset(body=body, db=db_mock, current_user=MagicMock(id=1))
         
         # Assert
         self.assertEqual(preset.name, "Classic Clean")
@@ -68,13 +73,48 @@ class TestPresetRouter(unittest.IsolatedAsyncioTestCase):
         db_mock.flush = AsyncMock(side_effect=SQLAlchemyError("Database connection lost"))
         db_mock.rollback = AsyncMock()
         
+        # Mock database select result for non-existent client_id checking
+        result_mock = MagicMock()
+        result_mock.scalars = MagicMock(return_value=MagicMock(first=MagicMock(return_value=None)))
+        db_mock.execute = AsyncMock(return_value=result_mock)
+        
         # Act & Assert
         with self.assertRaises(HTTPException) as context:
-            await create_preset(body=body, db=db_mock)
+            await create_preset(body=body, db=db_mock, current_user=MagicMock(id=1))
             
         self.assertEqual(context.exception.status_code, 400)
         self.assertIn("Database error during preset creation", context.exception.detail)
         db_mock.rollback.assert_called_once()
+
+    async def test_create_preset_idempotency(self) -> None:
+        """
+        Verifica che create_preset restituisca il preset esistente se viene fornito lo stesso client_id.
+        """
+        # Arrange
+        body = PresetCreate(
+            name="Idempotent Preset",
+            client_id="unique-uuid-123",
+            effects_chain=[]
+        )
+        
+        db_mock = MagicMock()
+        db_mock.add = MagicMock()
+        
+        # Simula il risultato della query per client_id
+        existing_preset = MagicMock()
+        existing_preset.name = "Idempotent Preset"
+        existing_preset.client_id = "unique-uuid-123"
+        
+        result_mock = MagicMock()
+        result_mock.scalars = MagicMock(return_value=MagicMock(first=MagicMock(return_value=existing_preset)))
+        db_mock.execute = AsyncMock(return_value=result_mock)
+        
+        # Act
+        preset = await create_preset(body=body, db=db_mock, current_user=MagicMock(id=1))
+        
+        # Assert
+        self.assertEqual(preset, existing_preset)
+        db_mock.add.assert_not_called()
 
 
 if __name__ == "__main__":

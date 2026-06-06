@@ -29,6 +29,9 @@ class Preset(Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(String(512), nullable=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    client_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, unique=True, index=True
+    )
     config_json: Mapped[list | dict] = mapped_column(
         JSON, nullable=False, default=list
     )

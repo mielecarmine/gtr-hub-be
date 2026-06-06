@@ -55,10 +55,21 @@ async def create_preset(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Preset:
+    if body.client_id:
+        stmt = select(Preset).where(
+            Preset.client_id == body.client_id,
+            Preset.user_id == current_user.id
+        )
+        result = await db.execute(stmt)
+        existing_preset = result.scalars().first()
+        if existing_preset:
+            return existing_preset
+
     preset = Preset(
         name=body.name,
         description=body.description,
         user_id=current_user.id,
+        client_id=body.client_id,
         config_json=[pedal.model_dump() for pedal in body.effects_chain],
     )
     try:

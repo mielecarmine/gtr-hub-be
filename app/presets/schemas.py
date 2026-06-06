@@ -29,6 +29,10 @@ class PresetBase(BaseModel):
         validation_alias=AliasChoices("effects_chain", "config_json"),
         description="La catena validata dei pedali dell'effetto",
     )
+    client_id: str | None = Field(
+        None,
+        description="UUID generato dal client per identificare univocamente il preset",
+    )
 
 
 class PresetCreate(PresetBase):
