@@ -1,22 +1,12 @@
 """
-schemas.py - Modelli Pydantic v2 per validazione input/output dell'API.
-
-Convenzioni di naming:
-  - *Create  → payload in ingresso per creare una risorsa
-  - *Update  → payload in ingresso per aggiornamento parziale (PATCH)
-  - *Out     → risposta verso il frontend
+presets/schemas.py - Modelli Pydantic v2 per validazione input/output dei preset.
 """
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
-
 from pydantic import BaseModel, ConfigDict, Field
 
-
-# ===================================================================
-# Pedale / Effetto singolo
-# ===================================================================
 
 class PedalConfig(BaseModel):
     """
@@ -38,33 +28,6 @@ class PedalConfig(BaseModel):
         description="Parametri specifici del pedale (gain, decay, wet, ecc.)",
     )
 
-
-# ===================================================================
-# User
-# ===================================================================
-
-class UserBase(BaseModel):
-    username: str = Field(..., min_length=3, max_length=64)
-    email: str = Field(..., max_length=256)
-
-
-class UserCreate(UserBase):
-    """Payload per la registrazione di un nuovo utente."""
-    password: str = Field(..., min_length=8)
-
-
-class UserOut(UserBase):
-    """Schema di risposta per l'anagrafica utente."""
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    is_active: bool
-    created_at: datetime
-
-
-# ===================================================================
-# Preset
-# ===================================================================
 
 class PresetBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=128)

@@ -1,13 +1,13 @@
 """
-routers/users.py - Endpoint per la gestione degli utenti.
+users/router.py - Endpoint per la gestione degli utenti.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import User
-from app.schemas import UserCreate, UserOut
+from app.users.models import User
+from app.users.schemas import UserCreate, UserOut
 
 router = APIRouter(prefix="/users", tags=["Users"])
 

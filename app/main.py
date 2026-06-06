@@ -7,11 +7,21 @@ Avvio:
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import text
 
-from app.database import Base, engine
-from app.routers import presets, users
+from app.database import Base, engine, get_db
+
+# Importa esplicitamente i moduli/router di feature
+from app.users.router import router as users_router
+from app.presets.router import router as presets_router
+
+# Assicura che i modelli vengano importati prima di Base.metadata.create_all
+# in modo che SQLAlchemy possa registrarli correttamente all'avvio.
+from app.users.models import User
+from app.presets.models import Preset
 
 
 # -------------------------------------------------------------------
@@ -57,8 +67,8 @@ app.add_middleware(
 # -------------------------------------------------------------------
 # Routers
 # -------------------------------------------------------------------
-app.include_router(users.router, prefix="/api/v1")
-app.include_router(presets.router, prefix="/api/v1")
+app.include_router(users_router, prefix="/api/v1")
+app.include_router(presets_router, prefix="/api/v1")
 
 
 # -------------------------------------------------------------------
@@ -70,5 +80,17 @@ async def root():
 
 
 @app.get("/health", tags=["Health"])
-async def health():
-    return {"status": "ok"}
+async def health(db: AsyncSession = Depends(get_db)):
+    try:
+        # Test the database connection
+        await db.execute(text("SELECT 1"))
+        db_status = "healthy"
+    except Exception as e:
+        db_status = f"unhealthy: {str(e)}"
+
+    status_code = "ok" if db_status == "healthy" else "error"
+    return {
+        "status": status_code,
+        "database": db_status,
+        "message": "GTR Hub API is running smoothly 🎸" if status_code == "ok" else "GTR Hub API has issues ⚠️"
+    }

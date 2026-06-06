@@ -1,13 +1,13 @@
 """
-routers/presets.py - Endpoint CRUD per i Preset.
+presets/router.py - Endpoint CRUD per i Preset.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Preset
-from app.schemas import PresetCreate, PresetOut, PresetUpdate
+from app.presets.models import Preset
+from app.presets.schemas import PresetCreate, PresetOut, PresetUpdate
 
 router = APIRouter(prefix="/presets", tags=["Presets"])
 
