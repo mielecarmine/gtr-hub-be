@@ -8,3 +8,4 @@ wheels/
 
 # Virtual environments
 .venv
+db/gtr_hub.db
