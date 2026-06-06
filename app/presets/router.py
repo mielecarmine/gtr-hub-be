@@ -6,27 +6,26 @@ from typing import Sequence
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import get_db
 from app.presets.models import Preset
 from app.presets.schemas import PresetCreate, PresetOut, PresetUpdate
+from app.auth.dependencies import get_current_user
+from app.users.models import User
 
 router = APIRouter(prefix="/presets", tags=["Presets"])
 
 
 # -------------------------------------------------------------------
-# GET /presets  – lista tutti i preset (filtrabili per user_id)
+# GET /presets  – lista tutti i preset dell'utente corrente
 # -------------------------------------------------------------------
 @router.get("/", response_model=list[PresetOut])
 async def list_presets(
-    user_id: int | None = None,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Sequence[Preset]:
-    stmt = select(Preset)
-    if user_id is not None:
-        stmt = stmt.where(Preset.user_id == user_id)
+    stmt = select(Preset).where(Preset.user_id == current_user.id)
     result = await db.execute(stmt)
     presets = result.scalars().all()
     return presets
@@ -36,9 +35,13 @@ async def list_presets(
 # GET /presets/{id}  – singolo preset
 # -------------------------------------------------------------------
 @router.get("/{preset_id}", response_model=PresetOut)
-async def get_preset(preset_id: int, db: AsyncSession = Depends(get_db)) -> Preset:
+async def get_preset(
+    preset_id: int, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Preset:
     preset = await db.get(Preset, preset_id)
-    if preset is None:
+    if preset is None or preset.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Preset not found")
     return preset
 
@@ -50,11 +53,12 @@ async def get_preset(preset_id: int, db: AsyncSession = Depends(get_db)) -> Pres
 async def create_preset(
     body: PresetCreate,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Preset:
     preset = Preset(
         name=body.name,
         description=body.description,
-        user_id=1,  # Hardcoded user_id=1 temporaneo per Sprint 4
+        user_id=current_user.id,
         config_json=[pedal.model_dump() for pedal in body.effects_chain],
     )
     try:
@@ -78,9 +82,10 @@ async def update_preset(
     preset_id: int,
     body: PresetUpdate,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> Preset:
     preset = await db.get(Preset, preset_id)
-    if preset is None:
+    if preset is None or preset.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Preset not found")
 
     if body.name is not None:
@@ -99,8 +104,12 @@ async def update_preset(
 # DELETE /presets/{id}  – elimina preset
 # -------------------------------------------------------------------
 @router.delete("/{preset_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_preset(preset_id: int, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_preset(
+    preset_id: int, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
     preset = await db.get(Preset, preset_id)
-    if preset is None:
+    if preset is None or preset.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Preset not found")
     await db.delete(preset)

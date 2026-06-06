@@ -17,6 +17,7 @@ from app.database import Base, engine, get_db, AsyncSessionLocal
 # Importa esplicitamente i moduli/router di feature
 from app.users.router import router as users_router
 from app.presets.router import router as presets_router
+from app.auth.router import router as auth_router
 
 # Assicura che i modelli vengano importati prima di Base.metadata.create_all
 # in modo che SQLAlchemy possa registrarli correttamente all'avvio.
@@ -80,6 +81,7 @@ app.add_middleware(
 # -------------------------------------------------------------------
 # Routers
 # -------------------------------------------------------------------
+app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
 app.include_router(presets_router, prefix="/api/v1")
 
