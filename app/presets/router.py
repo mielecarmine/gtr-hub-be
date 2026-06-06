@@ -54,7 +54,7 @@ async def create_preset(
         name=body.name,
         description=body.description,
         user_id=user_id,
-        config_json=[pedal.model_dump() for pedal in body.config_json],
+        config_json=[pedal.model_dump() for pedal in body.effects_chain],
     )
     db.add(preset)
     await db.flush()
@@ -79,8 +79,8 @@ async def update_preset(
         preset.name = body.name
     if body.description is not None:
         preset.description = body.description
-    if body.config_json is not None:
-        preset.config_json = [pedal.model_dump() for pedal in body.config_json]
+    if body.effects_chain is not None:
+        preset.config_json = [pedal.model_dump() for pedal in body.effects_chain]
 
     await db.flush()
     await db.refresh(preset)
