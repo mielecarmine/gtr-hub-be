@@ -7,6 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.database import get_db
 from app.presets.models import Preset
 from app.presets.schemas import PresetCreate, PresetOut, PresetUpdate
@@ -47,19 +49,25 @@ async def get_preset(preset_id: int, db: AsyncSession = Depends(get_db)) -> Pres
 @router.post("/", response_model=PresetOut, status_code=status.HTTP_201_CREATED)
 async def create_preset(
     body: PresetCreate,
-    user_id: int,          # in futuro sostituire con JWT dependency
     db: AsyncSession = Depends(get_db),
 ) -> Preset:
     preset = Preset(
         name=body.name,
         description=body.description,
-        user_id=user_id,
+        user_id=1,  # Hardcoded user_id=1 temporaneo per Sprint 4
         config_json=[pedal.model_dump() for pedal in body.effects_chain],
     )
-    db.add(preset)
-    await db.flush()
-    await db.refresh(preset)
-    return preset
+    try:
+        db.add(preset)
+        await db.flush()
+        await db.refresh(preset)
+        return preset
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Database error during preset creation: {str(e)}",
+        )
 
 
 # -------------------------------------------------------------------

@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
-from app.database import Base, engine, get_db
+from app.database import Base, engine, get_db, AsyncSessionLocal
 
 # Importa esplicitamente i moduli/router di feature
 from app.users.router import router as users_router
@@ -31,6 +31,19 @@ from app.presets.models import Preset
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    
+    # Crea un utente di test con id=1 se non esiste già
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            test_user = await session.get(User, 1)
+            if not test_user:
+                user = User(
+                    id=1,
+                    username="testuser",
+                    email="testuser@example.com",
+                    hashed_password="hashed_testpassword",
+                )
+                session.add(user)
     yield
     # Cleanup (opzionale in dev)
     await engine.dispose()
