@@ -21,7 +21,7 @@ def _fake_hash(password: str) -> str:
 # POST /users  – registrazione utente
 # -------------------------------------------------------------------
 @router.post("/", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-async def create_user(body: UserCreate, db: AsyncSession = Depends(get_db)):
+async def create_user(body: UserCreate, db: AsyncSession = Depends(get_db)) -> User:
     # Controllo username duplicato
     result = await db.execute(select(User).where(User.username == body.username))
     if result.scalar_one_or_none():
@@ -44,7 +44,7 @@ async def create_user(body: UserCreate, db: AsyncSession = Depends(get_db)):
 # GET /users/{id}  – profilo utente
 # -------------------------------------------------------------------
 @router.get("/{user_id}", response_model=UserOut)
-async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_user(user_id: int, db: AsyncSession = Depends(get_db)) -> User:
     user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

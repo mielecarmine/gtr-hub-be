@@ -75,12 +75,12 @@ app.include_router(presets_router, prefix="/api/v1")
 # Health-check
 # -------------------------------------------------------------------
 @app.get("/", tags=["Health"])
-async def root():
+async def root() -> dict[str, str]:
     return {"status": "ok", "message": "GTR Hub API is running 🎸"}
 
 
 @app.get("/health", tags=["Health"])
-async def health(db: AsyncSession = Depends(get_db)):
+async def health(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
     try:
         # Test the database connection
         await db.execute(text("SELECT 1"))
