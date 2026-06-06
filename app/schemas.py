@@ -1,8 +1,10 @@
 """
-schemas.py - Modelli Pydantic per validazione input/output.
+schemas.py - Modelli Pydantic v2 per validazione input/output dell'API.
 
-Rispecchiano l'interfaccia TypeScript del frontend:
-  - id, name, author_id, chain (lista di EffectNode)
+Convenzioni di naming:
+  - *Create  → payload in ingresso per creare una risorsa
+  - *Update  → payload in ingresso per aggiornamento parziale (PATCH)
+  - *Out     → risposta verso il frontend
 """
 from __future__ import annotations
 
@@ -11,32 +13,30 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+
 # ===================================================================
-# Effect Chain
+# Pedale / Effetto singolo
 # ===================================================================
 
-class EffectParams(BaseModel):
-    """Parametri liberi per un singolo effetto (key-value arbitrari)."""
-    model_config = ConfigDict(extra="allow")
-
-    # I campi comuni sono opzionali – il frontend può inviare qualsiasi param
-    # (gain, decay, rate, distortion, ecc.)
-
-
-class EffectNode(BaseModel):
+class PedalConfig(BaseModel):
     """
-    Nodo nella catena di effetti.
+    Definisce un singolo pedale nella catena di effetti.
 
     Corrisponde all'interfaccia TypeScript:
         interface EffectNode {
+          id: string;
           type: string;
           position: number;
           params: Record<string, unknown>;
         }
     """
-    type: str = Field(..., description="Tipo di effetto (es. 'Reverb', 'Distortion')")
-    position: int = Field(..., ge=0, description="Posizione ordinata nella catena")
-    params: dict[str, Any] = Field(default_factory=dict, description="Parametri specifici del nodo")
+    id: str = Field(..., description="Identificatore univoco del pedale (es. 'dist-1')")
+    type: str = Field(..., description="Tipo di effetto (es. 'distortion', 'reverb')")
+    position: int = Field(..., ge=0, description="Posizione ordinata nella catena (0-based)")
+    params: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Parametri specifici del pedale (gain, decay, wet, ecc.)",
+    )
 
 
 # ===================================================================
@@ -49,13 +49,16 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
+    """Payload per la registrazione di un nuovo utente."""
     password: str = Field(..., min_length=8)
 
 
-class UserRead(UserBase):
+class UserOut(UserBase):
+    """Schema di risposta per l'anagrafica utente."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    is_active: bool
     created_at: datetime
 
 
@@ -65,37 +68,29 @@ class UserRead(UserBase):
 
 class PresetBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=128)
+    description: str | None = Field(None, max_length=512)
 
 
 class PresetCreate(PresetBase):
     """Payload inviato dal frontend per creare un preset."""
-    chain: list[EffectNode] = Field(default_factory=list)
+    config_json: list[PedalConfig] = Field(
+        default_factory=list,
+        description="Catena completa di pedali/effetti",
+    )
 
 
 class PresetUpdate(BaseModel):
-    """Payload per aggiornamento parziale (PATCH)."""
+    """Payload per aggiornamento parziale (PATCH) di un preset."""
     name: str | None = Field(None, min_length=1, max_length=128)
-    chain: list[EffectNode] | None = None
+    description: str | None = Field(None, max_length=512)
+    config_json: list[PedalConfig] | None = None
 
 
-class PresetRead(PresetBase):
-    """Risposta al frontend, include chain deserializzata."""
+class PresetOut(PresetBase):
+    """Schema di risposta completo, include ID, timestamp e catena effetti."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    author_id: int
-    chain: list[EffectNode]
+    user_id: int
+    config_json: list[PedalConfig]
     created_at: datetime
-    updated_at: datetime
-
-    @classmethod
-    def from_orm_preset(cls, preset) -> "PresetRead":  # type: ignore[override]
-        """Costruisce il modello leggendo il property `chain` dell'ORM."""
-        return cls(
-            id=preset.id,
-            name=preset.name,
-            author_id=preset.author_id,
-            chain=[EffectNode(**node) for node in preset.chain],
-            created_at=preset.created_at,
-            updated_at=preset.updated_at,
-        )

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import User
-from app.schemas import UserCreate, UserRead
+from app.schemas import UserCreate, UserOut
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -20,7 +20,7 @@ def _fake_hash(password: str) -> str:
 # -------------------------------------------------------------------
 # POST /users  – registrazione utente
 # -------------------------------------------------------------------
-@router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def create_user(body: UserCreate, db: AsyncSession = Depends(get_db)):
     # Controllo username duplicato
     result = await db.execute(select(User).where(User.username == body.username))
@@ -43,7 +43,7 @@ async def create_user(body: UserCreate, db: AsyncSession = Depends(get_db)):
 # -------------------------------------------------------------------
 # GET /users/{id}  – profilo utente
 # -------------------------------------------------------------------
-@router.get("/{user_id}", response_model=UserRead)
+@router.get("/{user_id}", response_model=UserOut)
 async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
     user = await db.get(User, user_id)
     if user is None:
